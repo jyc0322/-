@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>刷题背题神器</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #app {
+            width: 90%;
+            max-width: 600px;
+            background: #fff;
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        #progress {
+            font-size: 14px;
+            color: #666;
+        }
+
+        #quiz-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #question {
+            font-size: 18px;
+            font-weight: bold;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        #options {
+            display: grid;
+            gap: 10px;
+        }
+
+        .opt-btn {
+            background-color: #fff;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .opt-btn:hover {
+            border-color: var(--primary-color);
+            background-color: #fbfdff;
+        }
+
+        /* 正确答案样式 */
+        .opt-btn.correct {
+            border-color: var(--success-color);
+            background-color: #eafaf1;
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        /* 错误答案样式 */
+        .opt-btn.wrong {
+            border-color: var(--error-color);
+            background-color: #fdedec;
+            color: var(--error-color);
+        }
+
+        /* 选中错误后，显示正确答案 */
+        .opt-btn.correct-hint {
+            border-color: var(--success-color);
+            border-style: dashed;
+        }
+
+        /* 锁定按钮防止多选 */
+        #options.disabled .opt-btn {
+            cursor: default;
+            pointer-events: none;
+        }
+
+        #action-bar {
+            margin-top: 25px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        button.action-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button.action-btn:hover { background-color: #357abd; }
+
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <div id="header">
+            <span style="font-weight: bold; color:var(--primary-color);">维修电工真题精选</span>
+            <div id="progress">加载中...</div>
+        </div>
+
+        <div id="quiz-container">
+            <div id="question">题目加载中，请确保你已经放入了数据...</div>
+            <div id="options">
+                </div>
+        </div>
+
+        <div id="action-bar">
+            <button class="action-btn" onclick="nextQuestion()">跳过此题</button>
+            <button class="action-btn" style="background-color: #aaa;" onclick="restartQuiz()">重新洗牌</button>
+        </div>
+    </div>
+
+<script>
+    // ==========================================
+    // 核心数据区 (将 Excel 生成的内容贴到这里)
+    // ==========================================
+    const testBank = [
+        // 示例数据（你粘贴进去后请删除这几行示例）
+        { "type": "单选题", "q": "岗位的质量要求通常包括（　　）、工作内容、工艺规程及参数控制等。", "a": "A", "opts": ["操作程序", "工作目标", "工作性质", "工作计划"] },
+        { "type": "单选题", "q": "下列电磁污染形式中不属于人为的电磁污染的是（　　）。", "a": "C", "opts": ["脉冲放电", "高频感应加热", "磁暴", "射频辐射"] },
+        { "type": "单选题", "q": "（　　）的工频电流通过人体时，就会有生命危险。", "a": "D", "opts": ["0.1mA", "1mA", "15mA", "50mA"] }
+        // --- 将复制的Excel内容贴在上方 ---
+    ];
+
+    // ==========================================
+    // 应用逻辑区
+    // ==========================================
+    
+    let currentIndex = 0;
+    let shuffledBank = [];
+
+    // Fisher-Yates 洗牌算法，确保完全随机
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    // 初始化考试
+    function initQuiz() {
+        if (testBank.length === 0) {
+            document.getElementById('question').innerText = "❌ 错误：题库为空。请编辑 HTML 文件，在 testBank 数组中粘贴 Excel 生成的数据。";
+            return;
+        }
+        // 深拷贝一份题库并洗牌
+        shuffledBank = shuffle([...testBank]);
+        currentIndex = 0;
+        showQuestion();
+    }
+
+    // 显示题目
+    function showQuestion() {
+        const questionEl = document.getElementById('question');
+        const optionsEl = document.getElementById('options');
+        const progressEl = document.getElementById('progress');
+
+        // 清空状态
+        optionsEl.innerHTML = '';
+        optionsEl.classList.remove('disabled');
+
+        if (currentIndex >= shuffledBank.length) {
+            questionEl.innerText = "🎉 恭喜！所有的题目都刷完了！";
+            progressEl.innerText = `全部完成 (${shuffledBank.length}/${shuffledBank.length})`;
+            return;
+        }
+
+        const currentQuiz = shuffledBank[currentIndex];
+        
+        // 更新进度
+        progressEl.innerText = `第 ${currentIndex + 1} 题 / 共 ${shuffledBank.length} 题`;
+
+        // 显示题干
+        questionEl.innerText = `${currentQuiz.q}`;
+
+        // 生成选项 (A, B, C, D)
+        const labels = ['A', 'B', 'C', 'D'];
+        currentQuiz.opts.forEach((optText, index) => {
+            if(optText && optText.trim() !== "") { // 确保选项不为空
+                const button = document.createElement('button');
+                button.className = 'opt-btn';
+                button.innerHTML = `<strong>${labels[index]}.</strong> ${optText}`;
+                button.setAttribute('data-ans', labels[index]);
+                button.onclick = function() { checkAnswer(this, labels[index]); };
+                optionsEl.appendChild(button);
+            }
+        });
+    }
+
+    // 检查答案
+    function checkAnswer(selectedBtn, selectedLetter) {
+        const optionsEl = document.getElementById('options');
+        const currentQuiz = shuffledBank[currentIndex];
+        const correctAnswer = currentQuiz.a.trim().toUpperCase();
+
+        // 锁定所有选项
+        optionsEl.classList.add('disabled');
+
+        if (selectedLetter === correctAnswer) {
+            // 答对了
+            selectedBtn.classList.add('correct');
+            // 延时 1 秒自动下一题，提升刷题效率
+            setTimeout(nextQuestion, 1000);
+        } else {
+            // 答错了
+            selectedBtn.classList.add('wrong');
+            // 找出正解并提示
+            const buttons = optionsEl.querySelectorAll('.opt-btn');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('data-ans') === correctAnswer) {
+                    btn.classList.add('correct-hint');
+                }
+            });
+        }
+    }
+
+    // 下一题
+    function nextQuestion() {
+        currentIndex++;
+        showQuestion();
+    }
+
+    // 重新开始
+    function restartQuiz() {
+        if(confirm("确定要重新洗牌开始吗？")) {
+            initQuiz();
+        }
+    }
+
+    // 页面加载完成后启动
+    window.onload = initQuiz;
+
+</script>
+</body>
+</html>
