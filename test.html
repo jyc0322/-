@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>维修电工真题模拟系统</title>
+    <title>维修电工真题刷题系统</title>
     <style>
         :root {
             --primary: #4f46e5;
@@ -54,17 +54,22 @@
         .btn-primary:hover { background: var(--primary-hover); }
         .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
         .btn-outline:hover { background: var(--bg); }
+        .btn-danger { background: #fee2e2; color: var(--danger); }
 
         /* ----- 首页 ----- */
         #home-screen { align-items: center; justify-content: center; text-align: center; }
         .title { font-size: 28px; font-weight: bold; color: var(--primary); margin-bottom: 8px; }
         .subtitle { color: var(--text-muted); margin-bottom: 40px; }
+        .section-title { font-size: 18px; font-weight: bold; margin: 24px 0 16px; width: 100%; text-align: left; max-width: 400px;}
         .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 400px; }
         .mode-card {
             background: var(--surface); border: 2px solid var(--border); border-radius: 12px;
-            padding: 24px; cursor: pointer; transition: all 0.2s; font-size: 18px; font-weight: bold;
+            padding: 20px; cursor: pointer; transition: all 0.2s; font-size: 16px; font-weight: bold;
         }
         .mode-card:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); }
+        
+        .special-card { background: #fef3c7; border-color: #fde68a; color: #b45309; grid-column: span 2;}
+        .special-card:hover { border-color: #f59e0b; }
 
         /* ----- 答题页 ----- */
         #quiz-screen { padding: 0; }
@@ -81,7 +86,13 @@
             cursor: pointer; transition: all 0.2s; display: flex; align-items: center;
         }
         .opt-item:hover { border-color: #cbd5e1; background: var(--bg); }
+        
+        /* 选项状态样式 */
         .opt-item.selected { border-color: var(--primary); background: #eef2ff; color: var(--primary); font-weight: bold; }
+        .opt-item.correct { border-color: var(--success); background: #d1fae5; color: #065f46; font-weight: bold; }
+        .opt-item.wrong { border-color: var(--danger); background: #fee2e2; color: #991b1b; }
+        .opt-item.correct-hint { border-style: dashed; border-color: var(--success); color: var(--success); }
+        .options.disabled .opt-item { pointer-events: none; }
         
         .quiz-footer {
             padding: 16px 24px; border-top: 1px solid var(--border); background: var(--surface);
@@ -89,11 +100,8 @@
         }
 
         /* 答题卡 (题目总览) */
-        .answer-sheet {
-            padding: 20px 24px; background: var(--bg); border-top: 1px solid var(--border);
-            max-height: 200px; overflow-y: auto;
-        }
-        .sheet-title { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; display: flex; justify-content: space-between;}
+        .answer-sheet { padding: 20px 24px; background: var(--bg); border-top: 1px solid var(--border); max-height: 200px; overflow-y: auto; }
+        .sheet-title { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;}
         .sheet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 8px; }
         .sheet-dot {
             width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
@@ -101,10 +109,12 @@
             cursor: pointer; background: var(--surface); color: var(--text-muted); transition: all 0.2s;
         }
         .sheet-dot.answered { background: #eef2ff; border-color: var(--primary); color: var(--primary); }
+        .sheet-dot.correct { background: #d1fae5; border-color: var(--success); color: #065f46; }
+        .sheet-dot.wrong { background: #fee2e2; border-color: var(--danger); color: #991b1b; }
         .sheet-dot.marked { background: #fffbeb; border-color: var(--warning); color: var(--warning); box-shadow: 0 0 0 2px #fde68a; }
         .sheet-dot.current { border-width: 2px; border-color: var(--text-main); font-weight: bold; }
 
-        /* ----- 结果页 & 错题回顾 ----- */
+        /* ----- 结果页 ----- */
         #result-screen { align-items: center; }
         .score-circle {
             width: 160px; height: 160px; border-radius: 50%; border: 8px solid var(--primary);
@@ -115,16 +125,6 @@
         .stat-item { text-align: center; }
         .stat-val { font-size: 24px; font-weight: bold; color: var(--text-main); }
         .stat-label { font-size: 14px; color: var(--text-muted); }
-        
-        #review-screen { overflow-y: auto; }
-        .review-item {
-            background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-            padding: 16px; margin-bottom: 16px;
-        }
-        .review-q { font-weight: bold; margin-bottom: 12px; }
-        .review-ans { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
-        .ans-wrong { color: var(--danger); }
-        .ans-correct { color: var(--success); font-weight: bold; }
 
     </style>
 </head>
@@ -133,14 +133,27 @@
 <div id="app">
     <!-- 1. 首页 -->
     <div id="home-screen" class="screen active">
-        <h1 class="title">维修电工真题精选</h1>
-        <p class="subtitle">完全随机组卷 · 考后智能出分</p>
-        <p style="margin-bottom: 16px; color: var(--text-main); font-weight: 500;">请选择本次抽题数量</p>
+        <h1 class="title">维修电工真题库</h1>
+        <p class="subtitle">让刷题变得更高效</p>
+
+        <div class="section-title">📖 日常背题 (即时反馈)</div>
         <div class="mode-grid">
-            <div class="mode-card" onclick="startQuiz(20)">20 题<br><span style="font-size:12px; font-weight:normal; color:#666;">小试牛刀</span></div>
-            <div class="mode-card" onclick="startQuiz(50)">50 题<br><span style="font-size:12px; font-weight:normal; color:#666;">进阶训练</span></div>
-            <div class="mode-card" onclick="startQuiz(100)">100 题<br><span style="font-size:12px; font-weight:normal; color:#666;">模拟考试</span></div>
-            <div class="mode-card" onclick="startQuiz(200)">200 题<br><span style="font-size:12px; font-weight:normal; color:#666;">极限挑战</span></div>
+            <div class="mode-card special-card" onclick="startQuiz('memorize', 0)">
+                🧠 背题模式<br>
+                <span style="font-size:12px; font-weight:normal;">全部题目随机，选完立刻出答案并记录错题</span>
+            </div>
+            <div class="mode-card" style="grid-column: span 2; background: #fee2e2; border-color: #fca5a5; color: #991b1b;" onclick="startQuiz('wrong', 0)">
+                📚 我的永久错题本 (<span id="wrong-count">0</span>)<br>
+                <span style="font-size:12px; font-weight:normal;">复习曾经答错的题目，答对自动移出</span>
+            </div>
+        </div>
+
+        <div class="section-title">📝 模拟考试 (交卷出分)</div>
+        <div class="mode-grid">
+            <div class="mode-card" onclick="startQuiz('exam', 20)">20 题<br><span style="font-size:12px; font-weight:normal; color:#666;">小试牛刀</span></div>
+            <div class="mode-card" onclick="startQuiz('exam', 50)">50 题<br><span style="font-size:12px; font-weight:normal; color:#666;">进阶训练</span></div>
+            <div class="mode-card" onclick="startQuiz('exam', 100)">100 题<br><span style="font-size:12px; font-weight:normal; color:#666;">标准模拟</span></div>
+            <div class="mode-card" onclick="startQuiz('exam', 200)">200 题<br><span style="font-size:12px; font-weight:normal; color:#666;">极限挑战</span></div>
         </div>
     </div>
 
@@ -159,11 +172,15 @@
             <button class="btn btn-outline" onclick="navQuestion(-1)">上一题</button>
             <button class="btn btn-primary" id="btn-next" onclick="navQuestion(1)">下一题</button>
         </div>
+        
         <!-- 答题卡 -->
         <div class="answer-sheet">
             <div class="sheet-title">
-                <span>答题卡总览 (点击可跳转)</span>
-                <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="submitQuiz()">交卷</button>
+                <span>答题卡 (点击跳转)</span>
+                <div>
+                    <button class="btn btn-danger" id="btn-exit" style="padding:4px 12px; font-size:12px; margin-right: 8px;" onclick="exitQuiz()">退出</button>
+                    <button class="btn btn-primary" id="btn-submit" style="padding:4px 12px; font-size:12px;" onclick="submitExam()">交卷</button>
+                </div>
             </div>
             <div class="sheet-grid" id="sheet-grid"></div>
         </div>
@@ -187,25 +204,14 @@
                 <div class="stat-label">答错/未答</div>
             </div>
         </div>
-        <div style="display:flex; gap:16px;">
-            <button class="btn btn-primary" onclick="showReview()">回顾错题</button>
-            <button class="btn btn-outline" onclick="goHome()">返回首页</button>
-        </div>
-    </div>
-
-    <!-- 4. 错题回顾页 -->
-    <div id="review-screen" class="screen">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
-            <h2 style="font-size: 20px;">错题本</h2>
-            <button class="btn btn-outline" style="padding: 6px 12px;" onclick="goHome()">返回首页</button>
-        </div>
-        <div id="review-list"></div>
+        <p style="color: var(--text-muted); margin-bottom: 24px;">* 错题已自动加入首页【永久错题本】</p>
+        <button class="btn btn-primary" style="width: 200px;" onclick="goHome()">返回首页</button>
     </div>
 </div>
 
 <script>
     // ==========================================
-    // 题库数据区 (请像上次一样把 Excel 生成的数据贴到这里)
+    // 题库数据区 (务必将你 Excel 导出的 1000 题贴在此处)
     // ==========================================
     const fullBank = [
     { "type": "单选题", "q": "岗位的质量要求通常包括（　　）、工作内容、工艺规程及参数控制等。", "a": "C", "opts": ["工作计划", "工作目的", "操作程序", "工作重点"] },
@@ -1385,16 +1391,47 @@
     ];
 
     // ==========================================
-    // 状态变量
+    // 状态与本地存储 (LocalStorage)
     // ==========================================
-    let currentSession = []; // 抽取的题目
-    let userAnswers = [];    // 用户的答案数组
-    let markedStatus = [];   // 标记状态数组
-    let currentIndex = 0;    // 当前题号
+    const WRONG_KEY = 'elec_wrong_bank';
+    const MARKED_KEY = 'elec_marked_bank';
+
+    let currentMode = 'exam'; // 'exam'考试, 'memorize'背题, 'wrong'错题本
+    let currentSession = []; 
+    let userAnswers = [];    
+    let isCorrectArray = []; // 记录背题模式下的对错状态 true/false
+    let currentIndex = 0;    
     let timerInterval = null;
     let secondsElapsed = 0;
 
     const labels = ['A', 'B', 'C', 'D'];
+
+    // 获取错题库 (以题干为唯一标识)
+    function getWrongBank() { return JSON.parse(localStorage.getItem(WRONG_KEY) || '[]'); }
+    function saveWrongBank(bank) { localStorage.setItem(WRONG_KEY, JSON.stringify(bank)); }
+    function addWrong(qText) {
+        let bank = getWrongBank();
+        if (!bank.includes(qText)) { bank.push(qText); saveWrongBank(bank); }
+    }
+    function removeWrong(qText) {
+        let bank = getWrongBank();
+        bank = bank.filter(q => q !== qText);
+        saveWrongBank(bank);
+    }
+    
+    // 获取标记库
+    function getMarkedBank() { return JSON.parse(localStorage.getItem(MARKED_KEY) || '[]'); }
+    function toggleMarkLocal(qText) {
+        let bank = getMarkedBank();
+        if (bank.includes(qText)) { bank = bank.filter(q => q !== qText); } 
+        else { bank.push(qText); }
+        localStorage.setItem(MARKED_KEY, JSON.stringify(bank));
+    }
+
+    // 初始化首页错题数量
+    function updateHomeStats() {
+        document.getElementById('wrong-count').innerText = getWrongBank().length;
+    }
 
     // 切换屏幕
     function switchScreen(screenId) {
@@ -1411,52 +1448,71 @@
         }
         return arr;
     }
-
-    // 格式化时间
     function formatTime(sec) {
         let m = Math.floor(sec / 60).toString().padStart(2, '0');
         let s = (sec % 60).toString().padStart(2, '0');
         return `${m}:${s}`;
     }
 
-    // 1. 开始考试
-    function startQuiz(count) {
-        if (fullBank.length === 0) {
-            alert("请先在 HTML 源码中放入题库数据！"); return;
-        }
+    // ==========================================
+    // 核心逻辑
+    // ==========================================
+
+    // 开始做题
+    function startQuiz(mode, count) {
+        if (fullBank.length === 0) { alert("请先在代码中载入题库数据！"); return; }
         
-        // 抽取指定数量的题目
-        let shuffled = shuffle(fullBank);
-        currentSession = shuffled.slice(0, Math.min(count, fullBank.length));
+        currentMode = mode;
+        let pool = [];
+
+        if (mode === 'wrong') {
+            const wrongTexts = getWrongBank();
+            if (wrongTexts.length === 0) { alert("错题本为空，去刷题收集错题吧！"); return; }
+            pool = fullBank.filter(q => wrongTexts.includes(q.q));
+            currentSession = shuffle(pool);
+        } else {
+            pool = shuffle(fullBank);
+            currentSession = mode === 'memorize' ? pool : pool.slice(0, Math.min(count, pool.length));
+        }
         
         // 初始化状态
         userAnswers = new Array(currentSession.length).fill(null);
-        markedStatus = new Array(currentSession.length).fill(false);
+        isCorrectArray = new Array(currentSession.length).fill(null);
         currentIndex = 0;
         secondsElapsed = 0;
 
-        // 启动定时器
-        clearInterval(timerInterval);
-        document.getElementById('timer').innerText = "00:00";
-        timerInterval = setInterval(() => {
-            secondsElapsed++;
-            document.getElementById('timer').innerText = formatTime(secondsElapsed);
-        }, 1000);
+        // UI 调整
+        if (mode === 'exam') {
+            document.getElementById('timer').style.display = 'block';
+            document.getElementById('btn-submit').style.display = 'inline-block';
+            // 启动定时器
+            clearInterval(timerInterval);
+            document.getElementById('timer').innerText = "00:00";
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                document.getElementById('timer').innerText = formatTime(secondsElapsed);
+            }, 1000);
+        } else {
+            // 背题模式/错题模式
+            document.getElementById('timer').style.display = 'none';
+            document.getElementById('btn-submit').style.display = 'none';
+        }
 
         buildAnswerSheet();
         renderQuestion();
         switchScreen('quiz-screen');
     }
 
-    // 2. 渲染题目
+    // 渲染题目
     function renderQuestion() {
         const q = currentSession[currentIndex];
         document.getElementById('q-counter').innerText = `${currentIndex + 1} / ${currentSession.length}`;
         document.getElementById('q-text').innerText = `${q.type}：${q.q}`;
         
         // 更新标记按钮状态
+        const isMarked = getMarkedBank().includes(q.q);
         const btnMark = document.getElementById('btn-mark');
-        if (markedStatus[currentIndex]) {
+        if (isMarked) {
             btnMark.innerText = "🚩 已标记";
             btnMark.style.color = "var(--warning)";
             btnMark.style.borderColor = "var(--warning)";
@@ -1469,36 +1525,84 @@
         // 生成选项
         const optsContainer = document.getElementById('q-options');
         optsContainer.innerHTML = '';
+        optsContainer.className = 'options'; // 重置禁用状态
+
+        const hasAnswered = userAnswers[currentIndex] !== null;
+        
+        // 如果是背题模式且已答过，锁定选项
+        if ((currentMode === 'memorize' || currentMode === 'wrong') && hasAnswered) {
+            optsContainer.classList.add('disabled');
+        }
+
         q.opts.forEach((optText, idx) => {
             if (!optText) return;
             const letter = labels[idx];
             const div = document.createElement('div');
-            div.className = `opt-item ${userAnswers[currentIndex] === letter ? 'selected' : ''}`;
+            
+            // 基础样式
+            div.className = 'opt-item';
+            
+            // 选中的样式
+            if (userAnswers[currentIndex] === letter) {
+                div.classList.add('selected');
+                // 背题模式/错题模式下的对错反馈
+                if (currentMode === 'memorize' || currentMode === 'wrong') {
+                    if (isCorrectArray[currentIndex]) div.classList.add('correct');
+                    else div.classList.add('wrong');
+                }
+            }
+
+            // 背题模式下，如果答错了，要标出正确答案
+            if ((currentMode === 'memorize' || currentMode === 'wrong') && hasAnswered) {
+                if (letter === q.a.trim().toUpperCase()) {
+                    div.classList.add('correct-hint');
+                }
+            }
+
             div.innerHTML = `<strong>${letter}.</strong> &nbsp; ${optText}`;
             div.onclick = () => selectOption(letter);
             optsContainer.appendChild(div);
         });
 
-        // 下一题按钮文字变更
-        document.getElementById('btn-next').innerText = (currentIndex === currentSession.length - 1) ? "最后一题" : "下一题";
-        
+        // 按钮文字变更
+        document.getElementById('btn-next').innerText = (currentIndex === currentSession.length - 1) ? "到底了" : "下一题";
         updateAnswerSheet();
     }
 
     // 选择答案
     function selectOption(letter) {
+        const q = currentSession[currentIndex];
+        const correctAns = q.a.trim().toUpperCase();
         userAnswers[currentIndex] = letter;
-        renderQuestion(); // 重新渲染以更新高亮
         
-        // 自动跳下一题 (仅当不是最后一题时，为了让用户有确认感，加一点点延时)
-        if (currentIndex < currentSession.length - 1) {
-            setTimeout(() => navQuestion(1), 300);
+        if (currentMode === 'memorize' || currentMode === 'wrong') {
+            // 即时反馈逻辑
+            const isCorrect = (letter === correctAns);
+            isCorrectArray[currentIndex] = isCorrect;
+            
+            if (isCorrect) {
+                if (currentMode === 'wrong') removeWrong(q.q); // 错题本中答对移出
+            } else {
+                addWrong(q.q); // 答错加入错题本
+            }
+            renderQuestion(); // 重新渲染反馈颜色
+            
+            // 自动跳下一题
+            if (isCorrect && currentIndex < currentSession.length - 1) {
+                setTimeout(() => navQuestion(1), 800);
+            }
+        } else {
+            // 考试模式，只记录不反馈
+            renderQuestion();
+            if (currentIndex < currentSession.length - 1) {
+                setTimeout(() => navQuestion(1), 300);
+            }
         }
     }
 
     // 标记功能
     function toggleMark() {
-        markedStatus[currentIndex] = !markedStatus[currentIndex];
+        toggleMarkLocal(currentSession[currentIndex].q);
         renderQuestion();
     }
 
@@ -1510,12 +1614,7 @@
             renderQuestion();
         }
     }
-
-    // 直接跳题 (通过答题卡)
-    function jumpTo(index) {
-        currentIndex = index;
-        renderQuestion();
-    }
+    function jumpTo(index) { currentIndex = index; renderQuestion(); }
 
     // 构建答题卡
     function buildAnswerSheet() {
@@ -1533,17 +1632,27 @@
 
     // 更新答题卡状态
     function updateAnswerSheet() {
+        const markedBank = getMarkedBank();
         for (let i = 0; i < currentSession.length; i++) {
             const dot = document.getElementById(`dot-${i}`);
             dot.className = 'sheet-dot';
             if (i === currentIndex) dot.classList.add('current');
-            if (markedStatus[i]) dot.classList.add('marked');
-            else if (userAnswers[i] !== null) dot.classList.add('answered');
+            
+            if (markedBank.includes(currentSession[i].q)) {
+                dot.classList.add('marked');
+            } else if (userAnswers[i] !== null) {
+                if (currentMode === 'exam') {
+                    dot.classList.add('answered');
+                } else {
+                    if (isCorrectArray[i]) dot.classList.add('correct');
+                    else dot.classList.add('wrong');
+                }
+            }
         }
     }
 
-    // 3. 交卷结算
-    function submitQuiz() {
+    // 交卷结算 (仅限考试模式)
+    function submitExam() {
         const unanswered = userAnswers.filter(a => a === null).length;
         if (unanswered > 0) {
             if (!confirm(`还有 ${unanswered} 道题未作答，确定要交卷吗？`)) return;
@@ -1557,11 +1666,13 @@
         currentSession.forEach((q, idx) => {
             if (userAnswers[idx] === q.a.trim().toUpperCase()) {
                 correctCount++;
+            } else if (userAnswers[idx] !== null) {
+                // 考试中答错的题目，交卷时统一加入错题本
+                addWrong(q.q);
             }
         });
 
         const score = Math.round((correctCount / currentSession.length) * 100);
-        
         document.getElementById('final-score').innerText = score;
         document.getElementById('stat-time').innerText = formatTime(secondsElapsed);
         document.getElementById('stat-correct').innerText = correctCount;
@@ -1570,51 +1681,22 @@
         switchScreen('result-screen');
     }
 
-    // 4. 回顾错题
-    function showReview() {
-        const listContainer = document.getElementById('review-list');
-        listContainer.innerHTML = '';
-
-        let hasMistakes = false;
-        currentSession.forEach((q, idx) => {
-            const uAns = userAnswers[idx];
-            const cAns = q.a.trim().toUpperCase();
-
-            if (uAns !== cAns) {
-                hasMistakes = true;
-                
-                // 找到用户选的文本和正确答案文本
-                let uText = "未作答";
-                let cText = "";
-                q.opts.forEach((opt, oIdx) => {
-                    if (labels[oIdx] === uAns) uText = opt;
-                    if (labels[oIdx] === cAns) cText = opt;
-                });
-
-                const item = document.createElement('div');
-                item.className = 'review-item';
-                item.innerHTML = `
-                    <div class="review-q">${idx + 1}. [${q.type}] ${q.q}</div>
-                    <div class="review-ans">
-                        <span class="ans-wrong">❌ 你的答案：${uAns ? (uAns + '. ' + uText) : '未作答'}</span>
-                        <span class="ans-correct">✅ 正确答案：${cAns}. ${cText}</span>
-                    </div>
-                `;
-                listContainer.appendChild(item);
-            }
-        });
-
-        if (!hasMistakes) {
-            listContainer.innerHTML = '<div style="text-align:center; color:var(--success); font-size:18px; padding:40px;">满分！太棒了，没有错题！🎉</div>';
+    function exitQuiz() {
+        if(confirm("退出当前练习进度将不保存，确定吗？")) {
+            goHome();
         }
-
-        switchScreen('review-screen');
     }
 
-    // 返回首页
     function goHome() {
+        clearInterval(timerInterval);
+        updateHomeStats();
         switchScreen('home-screen');
     }
+
+    // 初始化运行
+    window.onload = function() {
+        updateHomeStats();
+    };
 
 </script>
 </body>
