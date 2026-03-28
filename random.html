@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>筛分数据随机生成器 V3 (严格限制版)</title>
+    <style>
+        body { font-family: 'Microsoft YaHei', sans-serif; background-color: #f4f4f9; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2 { text-align: center; color: #333; }
+        .control-panel { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; padding: 15px; background: #eef2f5; border-radius: 5px; }
+        .control-group { border: 1px solid #ccc; padding: 10px; border-radius: 5px; flex: 1; min-width: 250px; background: white; }
+        .control-group h3 { margin-top: 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px; color: #0056b3; }
+        .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; }
+        .input-row input[type="range"] { width: 100px; cursor: pointer; }
+        .input-row input[type="number"] { width: 60px; text-align: center; border: 1px solid #ccc; border-radius: 3px; }
+        .btn-generate { display: block; width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px; transition: 0.2s; }
+        .btn-generate:hover { background: #218838; }
+        
+        /* 模拟本子表格排版 */
+        .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        table { width: 100%; border-collapse: collapse; text-align: center; margin-bottom: 10px; background: white; }
+        th, td { border: 2px solid #444; padding: 8px; font-size: 15px; }
+        th { background-color: #f9f9f9; }
+        .table-title { font-weight: bold; font-size: 16px; background-color: #e2e8f0; }
+        .highlight { font-weight: bold; color: #d9534f; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>筛分数据随机生成器</h1>
+    
+    <!-- 参数控制面板 -->
+    <div class="control-panel">
+        <div class="control-group">
+            <h3>总重量范围设置</h3>
+            <div class="input-row"><label>烧结:</label><input type="number" id="w-sj-min" value="21"> - <input type="number" id="w-sj-max" value="24"></div>
+            <div class="input-row"><label>焦炭:</label><input type="number" id="w-jt-min" value="18"> - <input type="number" id="w-jt-max" value="20"></div>
+            <div class="input-row"><label>块矿:</label><input type="number" id="w-kk-min" value="22"> - <input type="number" id="w-kk-max" value="24"></div>
+            <div class="input-row"><label>球矿:</label><input type="number" id="w-qk-min" value="21"> - <input type="number" id="w-qk-max" value="24"></div>
+            <div class="input-row"><label>返矿:</label><input type="number" id="w-fk-min" value="21"> - <input type="number" id="w-fk-max" value="24"></div>
+        </div>
+
+        <div class="control-group">
+            <h3>烧结筛比例 (严控范围)</h3>
+            <div class="input-row"><label>＞40 (10-15):</label><input type="range" id="p-sj-40" min="10" max="15" value="13" oninput="document.getElementById('v-sj-40').innerText=this.value"><span id="v-sj-40">13</span></div>
+            <div class="input-row"><label>＞25 (20-27):</label><input type="range" id="p-sj-25" min="20" max="27" value="23" oninput="document.getElementById('v-sj-25').innerText=this.value"><span id="v-sj-25">23</span></div>
+            <div class="input-row"><label>＞16 (20-27):</label><input type="range" id="p-sj-16" min="20" max="27" value="24" oninput="document.getElementById('v-sj-16').innerText=this.value"><span id="v-sj-16">24</span></div>
+            <div class="input-row"><label>＞10 (20-27):</label><input type="range" id="p-sj-10" min="20" max="27" value="22" oninput="document.getElementById('v-sj-10').innerText=this.value"><span id="v-sj-10">22</span></div>
+            <div class="input-row"><label>＞5 (14-19):</label><input type="range" id="p-sj-5" min="14" max="19" value="17" oninput="document.getElementById('v-sj-5').innerText=this.value"><span id="v-sj-5">17</span></div>
+            <div class="input-row"><label>＜5:</label><span style="color:#888;">系统自动控制 ＜1%</span></div>
+        </div>
+
+        <div class="control-group">
+            <h3>焦炭 / 块矿 / 返矿</h3>
+            <div class="input-row"><label>焦炭＞60 (20-30):</label><input type="range" id="p-jt-60" min="20" max="30" value="25" oninput="document.getElementById('v-jt-60').innerText=this.value"><span id="v-jt-60">25</span></div>
+            <div class="input-row"><label>焦炭＞40 (50以上):</label><input type="range" id="p-jt-40" min="50" max="75" value="52" oninput="document.getElementById('v-jt-40').innerText=this.value"><span id="v-jt-40">52</span></div>
+            <div class="input-row"><label>焦炭＞25 (20-30):</label><input type="range" id="p-jt-25" min="20" max="30" value="23" oninput="document.getElementById('v-jt-25').innerText=this.value"><span id="v-jt-25">23</span></div>
+            <hr style="border: 0; border-top: 1px solid #eee;">
+            <div class="input-row"><label>块矿＞20 (13-20):</label><input type="range" id="p-kk-20" min="13" max="20" value="15" oninput="document.getElementById('v-kk-20').innerText=this.value"><span id="v-kk-20">15</span></div>
+            <div class="input-row"><label>块矿＞16 (30-40):</label><input type="range" id="p-kk-16" min="30" max="40" value="34" oninput="document.getElementById('v-kk-16').innerText=this.value"><span id="v-kk-16">34</span></div>
+            <div class="input-row"><label>块矿＞10 (30-40):</label><input type="range" id="p-kk-10" min="30" max="40" value="35" oninput="document.getElementById('v-kk-10').innerText=this.value"><span id="v-kk-10">35</span></div>
+            <div class="input-row"><label>块矿＞5 (13-20):</label><input type="range" id="p-kk-5" min="13" max="20" value="15" oninput="document.getElementById('v-kk-5').innerText=this.value"><span id="v-kk-5">15</span></div>
+            <hr style="border: 0; border-top: 1px solid #eee;">
+            <div class="input-row"><label>返矿＞5 (10-15):</label><input type="range" id="p-fk-5" min="10" max="15" value="12" oninput="document.getElementById('v-fk-5').innerText=this.value"><span id="v-fk-5">12</span></div>
+        </div>
+    </div>
+
+    <button class="btn-generate" onclick="generateAll()">一键生成严格数据</button>
+
+    <!-- 输出表格区域 -->
+    <div class="grid-layout" id="output-area"></div>
+</div>
+
+<script>
+    function rand(min, max) { return +(Math.random() * (max - min) + min).toFixed(2); }
+    
+    // 【核心缩放算法】根据基础滑块做 ±1 波动后进行 100% 缩放
+    function generateProportions(configs) {
+        let result = {};
+        let fixedSum = 0;
+        let dynamicKeys = [];
+        let rawDynamicValues = {};
+
+        // 1. 生成 <1 的固定值（比如粉末 <5）
+        for (let key in configs) {
+            if (configs[key].isFixed) {
+                result[key] = rand(configs[key].min, configs[key].max);
+                fixedSum += result[key];
+            } else {
+                dynamicKeys.push(key);
+            }
+        }
+
+        // 剩下的百分比用来按比例分
+        let remaining = 100 - fixedSum; 
+        let rawSum = 0;
+
+        // 2. 获取滑块值，并在其基础上做 ±1 的随机波动
+        for (let key of dynamicKeys) {
+            let base = parseFloat(document.getElementById(configs[key].baseId).value);
+            // 这里执行核心要求：滑块值随机波动 ±1
+            let raw = base + (Math.random() * 2 - 1); 
+            rawDynamicValues[key] = raw;
+            rawSum += raw;
+        }
+
+        // 3. 按比例缩放（解决溢出或不足的问题）
+        let currentDynamicSum = 0;
+        let largestKey = '';
+        let largestVal = -1;
+
+        for (let i = 0; i < dynamicKeys.length; i++) {
+            let key = dynamicKeys[i];
+            let val = +(rawDynamicValues[key] / rawSum * remaining).toFixed(2);
+            result[key] = val;
+            currentDynamicSum += val;
+            
+            if (val > largestVal) {
+                largestVal = val;
+                largestKey = key;
+            }
+        }
+
+        // 4. 将小数点计算的 0.01 误差补给最大值，保证严格 100.00%
+        let totalCurrent = +(currentDynamicSum + fixedSum).toFixed(2);
+        let diff = +(100.00 - totalCurrent).toFixed(2);
+        if (diff !== 0 && largestKey !== '') {
+            result[largestKey] = +(result[largestKey] + diff).toFixed(2);
+        }
+
+        return result;
+    }
+
+    // 表格构建
+    function buildTable(title, totalWeight, proportions, keys) {
+        let html = `<table><tr><td colspan="3" class="table-title">${title}</td></tr>
+                    <tr><th>分级</th><th>重量 (kg)</th><th>比例 (%)</th></tr>
+                    <tr><td class="highlight">总重量</td><td class="highlight">${totalWeight}</td><td class="highlight">100.00</td></tr>`;
+        
+        keys.forEach(k => {
+            let prop = proportions[k];
+            let weight = (totalWeight * prop / 100).toFixed(2);
+            html += `<tr><td>${k}</td><td>${weight}</td><td>${prop.toFixed(2)}</td></tr>`;
+        });
+        html += `</table>`;
+        return html;
+    }
+
+    // 主生成逻辑
+    function generateAll() {
+        let output = document.getElementById('output-area');
+        output.innerHTML = '';
+        
+        // 重量生成
+        let wtSj = () => rand(parseFloat(document.getElementById('w-sj-min').value), parseFloat(document.getElementById('w-sj-max').value));
+        let wtJt = () => rand(parseFloat(document.getElementById('w-jt-min').value), parseFloat(document.getElementById('w-jt-max').value));
+        let wtKk = () => rand(parseFloat(document.getElementById('w-kk-min').value), parseFloat(document.getElementById('w-kk-max').value));
+        let wtQk = () => rand(parseFloat(document.getElementById('w-qk-min').value), parseFloat(document.getElementById('w-qk-max').value));
+        let wtFk = () => rand(parseFloat(document.getElementById('w-fk-min').value), parseFloat(document.getElementById('w-fk-max').value));
+
+        // 配置参数关联到 HTML 的 id
+        let sjConfig = {
+            '>40': { baseId: 'p-sj-40' }, '>25': { baseId: 'p-sj-25' },
+            '>16': { baseId: 'p-sj-16' }, '>10': { baseId: 'p-sj-10' },
+            '>5': { baseId: 'p-sj-5' }, '<5': { isFixed: true, min: 0.1, max: 0.99 }
+        };
+
+        let jtConfig = {
+            '>60': { baseId: 'p-jt-60' }, '>40': { baseId: 'p-jt-40' },
+            '>25': { baseId: 'p-jt-25' }, '<25': { isFixed: true, min: 0.1, max: 0.99 }
+        };
+
+        let kkConfig = {
+            '>20': { baseId: 'p-kk-20' }, '>16': { baseId: 'p-kk-16' },
+            '>10': { baseId: 'p-kk-10' }, '>5': { baseId: 'p-kk-5' },
+            '<5': { isFixed: true, min: 0.1, max: 0.99 }
+        };
+
+        // 渲染表格
+        output.innerHTML += `<div>${buildTable('(6) 烧结筛', wtSj(), generateProportions(sjConfig), ['>40', '>25', '>16', '>10', '>5', '<5'])}</div>`;
+        output.innerHTML += `<div>${buildTable('(7) 烧结筛', wtSj(), generateProportions(sjConfig), ['>40', '>25', '>16', '>10', '>5', '<5'])}</div>`;
+        
+        output.innerHTML += `<div>${buildTable('(2) 焦炭筛', wtJt(), generateProportions(jtConfig), ['>60', '>40', '>25', '<25'])}</div>`;
+        output.innerHTML += `<div>${buildTable('(4) 焦炭筛', wtJt(), generateProportions(jtConfig), ['>60', '>40', '>25', '<25'])}</div>`;
+        output.innerHTML += `<div>${buildTable('(6) 焦炭筛', wtJt(), generateProportions(jtConfig), ['>60', '>40', '>25', '<25'])}</div>`;
+
+        output.innerHTML += `<div>${buildTable('(1) 块矿筛', wtKk(), generateProportions(kkConfig), ['>20', '>16', '>10', '>5', '<5'])}</div>`;
+
+        // 球矿和返矿的特殊逻辑
+        let qkPropLower = rand(0.1, 0.99); 
+        output.innerHTML += `<div>${buildTable('(1) 球矿筛', wtQk(), { '>5': 100 - qkPropLower, '<5': qkPropLower }, ['>5', '<5'])}</div>`;
+
+        let wFkNow = wtFk(); 
+        let baseFk = parseFloat(document.getElementById('p-fk-5').value);
+        let pFkNow = baseFk + (Math.random() * 2 - 1); // ±1 波动
+        output.innerHTML += `<div><table><tr><td colspan="3" class="table-title">返矿</td></tr>
+            <tr><th>分级</th><th>重量 (kg)</th><th>比例 (%)</th></tr>
+            <tr><td class="highlight">总重量</td><td class="highlight">${wFkNow}</td><td></td></tr>
+            <tr><td>>5</td><td>${(wFkNow * pFkNow / 100).toFixed(2)}</td><td>${pFkNow.toFixed(2)}</td></tr>
+            </table></div>`;
+    }
+
+    window.onload = generateAll;
+</script>
+</body>
+</html>
